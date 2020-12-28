@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <title> Calculator </title>
+
+  <h2>Electronics Calculator</h2>
+
+
+
+</head>
+
+<body>
+
+  <script src="JS\ParallelCapacitance.js"></script>
+  <script src="JS\ParallelResist.js"></script>
+  <script src=""></script>
+  <script src=""></script>
+  <script src=""></script>
+
+  <h4>Resistance</h4>
+
+    <button type="submit" name="Series Resistance" onclick="SerResist()"> 
+    Series Resistance
+    </button>
+
+<br>
+<br>
+
+    <button type="submit" name="Parallel Resistance" onclick="ParaResist()">
+    Parallel Resistance
+    </button>
+
+<br>
+<br>
+
+  <h4>Capacitance</h4>
+
+    <button type="submit" name="Series Capacitance" onclick="SerCap()">
+    Series Capacitance
+    </button>
+
+<br>
+<br>
+
+    <button type="submit" name="Parallel Capacitance" onclick="ParaCap()">
+    Parallel Capacitance
+    </button>
+  
+<br>
+<br>
+
+  <h4>Wavelength and Period</h4>
+
+   <button type="submit" name="Wavelength" onclick="Wave()">
+    Wavelength
+    </button>
+
+<br>
+<br>
+
+    <button type="submit" name="Period" onclick="Period()">
+    Period
+    </button>
+
+ <!-- <script> 
+function ParaCap(){
+    var NumPCap = prompt("How many capacitors?")
+    var caps = new Array(NumPCap);
+    var reciprical = new Array(NumPCap);
+    var sum = 0;
+    var Total = 0;
+    var r = 1;
+
+    for (i=0;i<NumPCap;i++) {
+
+      caps[i] = prompt("Enter the value of C" + r);
+      r++;
+    }
+    for (j=0;j<NumPCap;j++){
+      reciprical[j] = (1/caps[j]);
+    }
+    for (l=0;l<NumPCap;l++){
+      sum += (1/reciprical[l]);
+    }
+    Total = (sum);
+    alert("The total resistance is " + Total +  "f");
+}
+
+function ParaResist(){ //Function the calculates parallel resistance
+    var NumPRes = prompt("How many resistors?")
+    var resistors = new Array(NumPRes); //create arrays and declare variables
+    var reciprical = new Array(NumPRes);
+    var sum = 0;
+    var Total = 0;
+    var r = 1;
+
+    for (i=0;i<NumPRes;i++) { //get values to be calculated
+
+      resistors[i] = prompt("Enter the value of R" + r); //user input
+      r++;
+    }
+    for (j=0;j<NumPRes;j++){  //convert values to recipricals
+      reciprical[j] = (1/resistors[j]);
+    }
+    for (l=0;l<NumPRes;l++){  //add all values together
+      sum += reciprical[l];
+    }
+    Total = (1/sum);  //take the reciprical of sum
+    alert("The total resistance is " + Total +  "Ω"); //display answer
+}
+
+function Wave(){     //Fuction that calculates wavelength from period
+    var waveLength = prompt("What is the Period?");
+    var reciprical = (1/waveLength);
+    alert("The wavelength is " + reciprical + " meters")
+
+}
+
+function Period(){   //Function that calculates period from wavelength
+    var Per = prompt("What is the wavelength?");
+    var reciprical = (1/Per);
+    alert("The Period is " + reciprical + " seconds")
+
+}
+
+function SerCap(){
+    var NumCap = prompt("How many capacitors?")
+    var caps = new Array(NumCap);
+    var reciprical = new Array(NumCap);
+    var sum = 0;
+    var Total = 0;
+    var c = 1;
+
+    for (i=0;i<NumCap;i++) {
+
+      caps[i] = prompt("Enter the value of C" + c);
+      c++;
+    }
+    for (j=0;j<NumCap;j++){
+      reciprical[j] = (1/caps[j]);
+    }
+    for (l=0;l<NumCap;l++){
+      sum += reciprical[l];
+    }
+    Total = (1/sum);
+    alert("The total capacitance is " + Total +  "f");
+}
+
+function SerResist(){ //Function that calculates series resistance
+    var NumSRes = prompt("How many resistors?")
+    var resistors = new Array(NumSRes); //create arrays and declare variables
+    var reciprical = new Array(NumSRes);
+    var sum = 0;
+    var Total = 0;
+    var r = 1;
+
+    for (i=0;i<NumSRes;i++) { //get values to be calculated
+
+      resistors[i] = prompt("Enter the value of R" + r);  //user input
+      r++;
+    }
+    for (j=0;j<NumSRes;j++){  //convert values to recipricals
+      reciprical[j] = (1/resistors[j]);
+    }
+    for (l=0;l<NumSRes;l++){  //reverse reciprical and add together, method used to avoid returning a string
+      sum += (1/reciprical[l]);
+    }
+    Total = (sum);
+    alert("The total resistance is " + Total +  "Ω");  //display answer
+}
+
+
+  </script> -->
+
+</body>
