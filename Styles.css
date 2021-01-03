@@ -1,12 +1,16 @@
-.btn{
-  color: Red;
-
+.Wel {
+  background-color: rgb(87, 135, 238);
+  font: bold;
+  width: 350px;
+  margin-left: 200px;
 }
-
-body{
-    color: aqua;
+a {
+  background-color: rgb(87, 135, 238);
+  color:black;
+  margin: 200px;
+  font-size: larger;
+  padding: 6px;
 }
-
-h1{
-    color:blue;
+body {
+  background-color: rgb(89, 15, 228);
 }

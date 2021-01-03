@@ -1,7 +1,15 @@
 <!DOCTYPE html>
 
 <head>
-  <link href="Styles.css">
+  <style>
+    .btns{
+      width: 800px;
+    }
+    body{
+      color:blue;
+    }
+
+  </style>
   <meta charset="UTF-8">
 
   <title> Calculator </title>
@@ -20,55 +28,56 @@
   <script src="JSSeriesResist.js"></script>
   <script src="JSPeriodWavelength.js"></script>
 
+  <div class="btns">
+    <h4>Resistance</h4>
+      <div class="btn">
+        <button type="submit" name="Series Resistance" onclick="SerResist()"> 
+        Series Resistance
+        </button>
+      </div>
+      
+      <br>
+      <br>
 
-  <h4>Resistance</h4>
-    <div class="btn">
-      <button type="submit" name="Series Resistance" onclick="SerResist()"> 
-      Series Resistance
+      <button type="submit" name="Parallel Resistance" onclick="ParaResist()">
+      Parallel Resistance
       </button>
+
+      <br>
+      <br>
+
+    <h4>Capacitance</h4>
+
+      <button type="submit" name="Series Capacitance" onclick="SerCap()">
+      Series Capacitance
+      </button>
+
+      <br>
+      <br>
+
+      <button type="submit" name="Parallel Capacitance" onclick="ParaCap()">
+      Parallel Capacitance
+      </button>
+    
+      <br>
+      <br>
+
+    <h4>Wavelength and Period</h4>
+
+      <button type="submit" name="Wavelength" onclick="Wave()">
+      Wavelength
+      </button>
+
+      <br>
+      <br>
+
+      <button type="submit" name="Period" onclick="Period()">
+      Period
+      </button>
+    
+      <br>
+      <br>
     </div>
-<br>
-<br>
-
-    <button type="submit" name="Parallel Resistance" onclick="ParaResist()">
-    Parallel Resistance
-    </button>
-
-<br>
-<br>
-
-  <h4>Capacitance</h4>
-
-    <button type="submit" name="Series Capacitance" onclick="SerCap()">
-    Series Capacitance
-    </button>
-
-<br>
-<br>
-
-    <button type="submit" name="Parallel Capacitance" onclick="ParaCap()">
-    Parallel Capacitance
-    </button>
-  
-<br>
-<br>
-
-  <h4>Wavelength and Period</h4>
-
-   <button type="submit" name="Wavelength" onclick="Wave()">
-    Wavelength
-    </button>
-
-<br>
-<br>
-
-    <button type="submit" name="Period" onclick="Period()">
-    Period
-    </button>
-  
-<br>
-<br>
-  
      <a href="index.html">Return Home</a>
 <!--
  <script> 
