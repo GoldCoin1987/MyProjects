@@ -1,0 +1,842 @@
+﻿<!DOCTYPE html>
+
+<head>
+  <style>
+    body{
+      background-color: lightgray;
+      margin: auto 50px;
+    }
+  </style>
+  <meta charset="UTF-8">
+
+  <title> Digital Lock </title>
+
+  <h2>Digital Lock written in Assembly</h2>
+
+</head>
+
+<body>
+  
+<br>
+<p>
+    ;*****************************************************************
+    ;		          Export symbols
+    ;*****************************************************************
+    ;For absolute assembly: this is the application entry point
+    ABSENTRY Main
+
+    ;*****************************************************************
+    ;	            Include derivative-specific definitions
+    ;*****************************************************************
+    ;The microcontroller chip used by Dragon12-plus2 board
+    INCLUDE 'mc9s12dg256.inc'
+
+    ;*****************************************************************
+    ;		          Symbolic constant(EQU) section
+    ;*****************************************************************
+
+    DATA        	EQU     RAMStart    ;use $1000 - $1FFF for data
+    STACK       	EQU     RAMEnd+1    ;use $2000 - $3FFF for stack
+    CODE        	EQU     $4000       ;use flash ROM $4000 - $7FFF for code
+    LCD_PORT        EQU     $0032       ;PORTK address
+    EN              EQU     %00000010   ;mask for enable
+    RS              EQU     %00000001   ;mask for register slect
+
+    ;*****************************************************************
+    ;	            Data section
+    ;*****************************************************************
+
+    ORG     DATA
+
+    R1            DS.B      1 ;Delay variables
+    R2            DS.B      1
+    R3            DS.B      1
+    Digit         DS.B      1 ;used to limit key presses
+    temp          DS.B      1 ;used to mask bits in keyscan
+    Number        DS.B      1 ;used for key compare
+    LockOut       DS.B      1 ;used for wrong password attempts
+    Keycodes      DC.B      $7D,$EE,$ED,$EB,$DE,$DD,$DB,$BE,$BD,$BB,$E7,$D7,$B7,$77,$7E,$7B
+    Line1         DC.B      ' ','A','C','C','E','S','S',' ','D','E','N','I','E','D',' ',' '
+    Line2         DC.B      ' ','A','C','C','E','S','S',' ','G','R','A','N','T','E','D',' '
+    Line3         DC.B      ' ',' ',' ',' ','E','E','T',' ','4','0','2',' ',' ',' ',' ',' '
+    Line4         DC.B      'C','A','P','S','T','O','N','E',' ','P','R','O','J','E','C','T'
+    Line5         DC.B      'I','N','S','T','R','U','C','T','O','R',':',' ',' ',' ',' ',' '
+    Line6         DC.B      'D','R','.',' ','S','E','T','O','O','D','E','H','N','I','A',' '
+    Line7         DC.B      ' ',' ',' ',' ',' ','L','O','C','K','E','D',' ',' ',' ',' ',' '
+    Line8         DC.B      'P','A','S','S','W','O','R','D',':'
+    LineBlank     DC.B      ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' '
+    Name          DC.B      ' ',' ','C','H','R','I','S',' ','A','U','C','O','I','N',' ',' '
+    Date          DC.B      ' ',' ','0','1',' ','M','A','Y',' ','1','9',' ',' ',' ',' ',' '
+    Title1        DC.B      ' ',' ',' ',' ','D','I','G','I','T','A','L',' ',' ',' ',' ',' '
+    Title2        DC.B      ' ',' ',' ',' ',' ','L','O','C','K',' ',' ',' ',' ',' ',' ',' '
+    LineDone1     DC.B      'C','O','N','T','A','C','T',' ','S','E','C','U','R','I','T','Y'
+    LineDone2     DC.B      ' ',' ',' ','M','A','N','A','G','E','R',' ',' ',' ',' ',' ',' '
+    LineTime      DC.B      'T','I','M','E','O','U','T',':',' ',' ',' ',' ',' ',' ',' ',' '
+
+    ;*****************************************************************
+    ;           	Main program section
+    ;*****************************************************************
+
+    ;Christopher Aucoin 1 May 19
+
+    ORG     CODE
+
+    Main:	      LDS     #STACK
+    JSR     InitLCD      ;initialize LCD
+    MOVB    #$0F,DDRA    ;initialize PORTA
+    BSET    PUCR,$01     ;pull-up resistor
+    MOVB    #00,Digit    ;initialize digit
+    MOVB    #$FF,DDRP    ;initialize PortP
+    MOVB    #$1F,PTP     ;RGB = red
+    MOVB    #00,LockOut  ;initialize lockout variable
+    JSR     Intro        ;run intro
+
+    NExt          LDAA    #$80         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+    CLRB
+
+    LN10          LDX     #Line8
+    LDAA    B,X         ;display Password on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    INCB
+    CMPB    #9
+    BNE     LN10
+
+    Try1          JSR     KeyLoop     ;keypad looking for 8
+    LDAB    #10
+    TIMER4        JSR     Delay
+    DECB
+    BNE     TIMER4
+    INC     Digit       ;determine number of wrong attempts
+    LDAB    Digit
+    CMPB    #4
+    BEQ     ERROR
+    LDAA    Number
+    CMPA    #'8'
+    BNE     Try1
+
+    JSR     KeyLoop     ;keypad looking for 5
+    LDAB    #10
+    TIMER1        JSR     Delay
+    DECB
+    BNE     TIMER1
+    LDAA    Number
+    CMPA    #'5'
+    BNE     Try1
+
+    JSR     KeyLoop     ;keypad looking for 2
+    LDAB    #10
+    TIMER2        JSR     Delay
+    DECB
+    BNE     TIMER2
+    LDAA    Number
+    CMPA    #'2'
+    BNE     Try1
+
+    JSR     KeyLoop    ;keypad looking for 0
+    LDAB    #10
+    TIMER3        JSR     Delay
+    DECB
+    BNE     TIMER3
+    LDAA    Number
+    CMPA    #'0'
+    BNE     Try1
+
+    JSR     Welcome    ;Access Granted
+    JMP     NExt       ;loop to beginning
+
+    ERROR         JSR     ErrorMes   ;Access denied
+    JSR     Delay
+    JSR     Delay
+    LDAA    LockOut    ;count wrong attempts
+    CMPA    #3
+    BEQ     Done
+
+    JMP     NExt
+
+    Done          LDAA    #$80         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+    CLRB
+    LN16          LDX     #LineDone1
+    LDAA    B,X         ;display Contact Security on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    INCB
+    CMPB    #16
+    BNE     LN16
+
+    LDAA    #$C0         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+    CLRB
+    LN17          LDX     #LineDone2
+    LDAA    B,X         ;display Manager on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    INCB
+    CMPB    #16
+    BNE     LN17
+
+    Here          BRA     Here        ;stay here forever
+
+    ;*****************************************************************
+    ;           	Intro Subroutine
+    ;*****************************************************************
+
+    Intro         LDAA    #$80         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+    CLRB
+
+    LN3           LDX     #Line3
+    LDAA    B,X         ;display EET 402 on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    INCB
+    CMPB    #16
+    BNE     LN3
+
+
+    LDAA    #$C5
+    JSR     LCDCMD4
+    JSR     Delay
+
+
+    LDAA    #$C0         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+    CLRB
+
+    LN4           LDX     #Line4
+    LDAA    B,X         ;display Capstone Project on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    INCB
+    CMPB    #16
+    BNE     LN4
+    JSR     TimeDelay
+    JSR     TimeDelay
+
+    LDAA    #$80         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+    CLRB
+
+    LN5           LDX     #Line5
+    LDAA    B,X         ;display Instructor on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    INCB
+    CMPB    #16
+    BNE     LN5
+
+    LDAA    #$C0         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+    CLRB
+
+    LN6           LDX     #Line6
+    LDAA    B,X         ;display Dr. Setoodehnia on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    INCB
+    CMPB    #16
+    BNE     LN6
+    JSR     TimeDelay
+    JSR     TimeDelay
+
+    LDAA    #$80         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+    CLRB
+
+    LN11          LDX     #Name
+    LDAA    B,X         ;display My Name on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    INCB
+    CMPB    #16
+    BNE     LN11
+
+    LDAA    #$C0         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+    CLRB
+
+    LN12          LDX     #Date
+    LDAA    B,X         ;display Date on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    INCB
+    CMPB    #16
+    BNE     LN12
+    JSR     TimeDelay
+    JSR     TimeDelay
+    LDAA    #$80         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+    CLRB
+
+    LN13          LDX     #Title1
+    LDAA    B,X         ;display Title on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    INCB
+    CMPB    #16
+    BNE     LN13
+
+    LDAA    #$C0         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+    CLRB
+
+    LN14          LDX     #Title2
+    LDAA    B,X         ;display Title on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    INCB
+    CMPB    #16
+    BNE     LN14
+    JSR     TimeDelay
+    JSR     TimeDelay
+    JSR     ClearScreen ;Clear Screen
+
+    RTS
+
+    ;*****************************************************************
+    ;           	ErrorMes Subroutine
+    ;*****************************************************************
+
+    ErrorMes      LDAA    #$80         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+    CLRB
+
+    LN1           LDX     #Line1
+    LDAA    B,X         ;display Access Denied on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    INCB
+    CMPB    #16
+    BNE     LN1
+
+    MOVB    #00,Digit   ;reset Digit
+
+    JSR     TimeDelay
+    JSR     ClearScreen
+    INC     LockOut
+
+    RTS
+
+    ;*****************************************************************
+    ;           	Welcome Subroutine
+    ;*****************************************************************
+
+    Welcome       LDAA    #$80         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+    CLRB
+
+    LN2           LDX     #Line2
+    LDAA    B,X         ;display Access Granted on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    INCB
+    CMPB    #16
+    BNE     LN2
+
+    MOVB    #$2F,PTP  ;disable 7seg display, light blue RGB
+
+    MOVB    #00,Digit ;reset Digit
+
+    MOVB    #$0F,DDRB   ;initialize motor control
+    LDAB    #0
+    over          LDAA    #0
+
+    OVER          MOVB    #$66,PORTB  ;Drive stepper motor                          ;
+    JSR     Delay
+    MOVB    #$CC,PORTB
+    JSR     Delay
+    MOVB    #$99,PORTB
+    JSR     Delay
+    MOVB    #$33,PORTB
+    JSR     Delay
+    INCA
+    CMPA    #140        ;equals 90 degrees
+
+    BNE     OVER
+    INCB
+    CMPB    #100
+    BNE     over
+
+    JSR     ClearScreen
+    JSR     Countdownmain
+    JSR     LOCK
+    JSR     TimeDelay
+    JSR     ClearScreen
+
+    RTS
+
+    ;*****************************************************************
+    ;           	Countdown Main
+    ;*****************************************************************
+
+    Countdownmain
+    LDAA    #$80         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+    CLRB
+
+    LN15          LDX     #LineTime
+    LDAA    B,X         ;display Timeout on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    INCB
+    CMPB    #16
+    BNE     LN15
+
+    LDAA    #$88         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+
+    LDAA    #'3'         ;display on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+
+    LDAA    #'0'         ;display character on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    JSR     TimeDelay
+
+    LDAA    #$88         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+
+    LDAA    #'2'         ;display on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+
+    JSR     CountdownLSB
+
+    LDAA    #$89         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+
+    LDAA    #'0'         ;display character on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    JSR     TimeDelay
+
+    LDAA    #$88         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+
+    LDAA    #'1'         ;display on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+
+    JSR     CountdownLSB
+
+    LDAA    #$89         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+
+    LDAA    #'0'         ;display on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    JSR     TimeDelay
+
+    LDAA    #$88         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+
+    LDAA    #'0'         ;display on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+
+    JSR     CountdownLSB
+
+    LDAA    #$89         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+
+    LDAA    #'0'         ;display on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    JSR     TimeDelay
+
+    RTS
+
+    ;*****************************************************************
+    ;           	CountdownLSB
+    ;*****************************************************************
+
+    CountdownLSB  LDAA    #$89         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+
+    LDAA    #'9'         ;display on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    JSR     TimeDelay
+
+    LDAA    #$89         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+
+    LDAA    #'8'         ;display on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    JSR     TimeDelay
+
+    LDAA    #$89         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+
+    LDAA    #'7'         ;display on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    JSR     TimeDelay
+
+    LDAA    #$89         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+
+    LDAA    #'6'         ;display on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    JSR     TimeDelay
+
+    LDAA    #$89         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+
+    LDAA    #'5'         ;display on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    JSR     TimeDelay
+
+    LDAA    #$89         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+
+    LDAA    #'4'         ;display on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    JSR     TimeDelay
+
+    LDAA    #$89         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+
+    LDAA    #'3'         ;display on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    JSR     TimeDelay
+
+    LDAA    #$89         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+
+    LDAA    #'2'         ;display on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    JSR     TimeDelay
+
+    LDAA    #$89         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+
+    LDAA    #'1'         ;display on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    JSR     TimeDelay
+
+    RTS
+
+    ;*****************************************************************
+    ;             Subroutine: Lock
+    ;*****************************************************************
+
+    LOCK          MOVB    #$1F,PTP     ;RGB=red
+    MOVB    #00,Digit    ;reset Digit
+
+    LDAA    #$80         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+    CLRB
+
+    LN9           LDX     #Line7
+    LDAA    B,X         ;display locked on LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    INCB
+    CMPB    #16
+    BNE     LN9
+    JSR     Delay
+
+    LDAA    #0          ;set A to 0 for Increment
+    OVER2         MOVB    #$33,PORTB  ;drive stepper motor                          ;
+    JSR     Delay2
+    MOVB    #$99,PORTB
+    JSR     Delay2
+    MOVB    #$CC,PORTB
+    JSR     Delay2
+    MOVB    #$66,PORTB
+    JSR     Delay2
+    INCA
+    CMPA    #140        ;equals 90 degrees
+    BNE     OVER2
+
+    RTS
+
+    ;*****************************************************************
+    ;             Clear Screen Subroutine
+    ;*****************************************************************
+
+    ClearScreen   LDAA    #$80         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+    CLRB
+
+    LN7           LDX     #LineBlank
+    LDAA    B,X         ;erase LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    INCB
+    CMPB    #16
+    BNE     LN7
+
+    LDAA    #$C0         ;set cursor location
+    JSR     LCDCMD4
+    JSR     Delay
+    CLRB
+
+    LN8           LDX     #LineBlank
+    LDAA    B,X         ;erase LCD
+    JSR     LCDDAT4
+    JSR     Delay
+    INCB
+    CMPB    #16
+    BNE     LN8
+    JSR     TimeDelay
+
+    RTS
+
+    ;*****************************************************************
+    ;           	KeyLoop Subroutine
+    ;*****************************************************************
+
+    KeyLoop
+    Loop
+    Key           JSR     KeyScan       ;wait for key press
+    CMPB    #$10
+    BEQ     Key
+
+    ADDB    #$30          ;convert to ASCII
+    TBA
+    STAA    Number
+
+    LDAA    #'*'
+    JSR     LCDDAT4       ;send to LCD
+
+    LDAB    #1
+    TIMER         JSR     Delay
+    DECB
+    BNE     TIMER
+    JSR     KeyScan       ;wait for key release
+    CMPB    #$10
+    BEQ     Loop
+
+    RTS
+
+    ;*****************************************************************
+    ;             Subroutine: KeyScan
+    ;*****************************************************************
+
+    KeyScan
+    CLRB
+    LDX  #Keycodes  ;load x with array
+    KS1           LDAA B,X        ;load next value
+    STAA PORTA      ;send to keypad
+    ANDA #$F0       ;save upper bits
+    STAA temp
+
+    LDAA #100       ;debounce
+    KS2           DECA
+    BNE  KS2
+
+    LDAA PORTA      ;read keypad upper bits
+    ANDA #$F0
+    CMPA temp
+    BEQ  KS3        ;if match key pressed
+    INCB
+    CMPB #$10       ;continue until B=$10
+    BNE  KS1
+
+    KS3           RTS
+
+    ;*****************************************************************
+    ;             Subroutine: InitLCD
+    ;*****************************************************************
+
+    InitLCD
+    MOVB #$FF,DDRK ;make PORTK an Output
+
+    LDAA #$33      ;wake up LCD
+    JSR  LCDCMD4
+    JSR  Delay
+
+    LDAA #$32      ;wake up LCD
+    JSR  LCDCMD4
+    JSR  Delay
+
+    LDAA #$24      ;N=1=two lines, F=0=(5x7)Pixels
+    JSR  LCDCMD4
+    JSR  Delay
+
+    LDAA #$0D      ;D=1=display on, C=1=cursor on,
+    JSR  LCDCMD4   ;B=0=blinking cursor off
+    JSR  Delay
+
+    LDAA #$01      ;one instruction, clear screen
+    JSR  LCDCMD4
+    JSR  Delay
+
+    LDAA #$06      ;I/D=1=cursor move right
+    JSR  LCDCMD4   ;S=0=no display shift
+    JSR  Delay
+
+    RTS
+
+    ;*****************************************************************
+    ;           	TimeDelay Subroutine
+    ;*****************************************************************
+
+    TimeDelay     LDAA    #50         ;1 second delay
+    Timedelay2    JSR     Delay
+    JSR     Delay
+    DECA
+    BNE     Timedelay2
+    RTS
+
+    ;*****************************************************************
+    ;             Subroutine: Delay
+    ;*****************************************************************
+
+    Delay
+    MOVB #1,R3        ;initialize variables
+    L3            MOVB #100,R2
+    L2            MOVB #240,R1
+    L1            NOP               ;waste clock cycles
+    NOP
+    NOP
+    DEC  R1
+    BNE  L1
+    DEC  R2
+    BNE  L2
+    DEC  R3
+    BNE  L3
+
+    RTS
+
+    Delay2
+    MOVB #1,R3        ;initialize variables
+    l3            MOVB #2,R2
+    l2            MOVB #2,R1
+    l1            NOP               ;waste clock cycles
+    NOP
+    NOP
+    DEC  R1
+    BNE  l1
+    DEC  R2
+    BNE  l2
+    DEC  R3
+    BNE  l3
+
+    RTS
+
+    ;*****************************************************************
+    ;             Subroutine: LCDCMD4
+    ;*****************************************************************
+
+    LCDCMD4
+    PSHA              ;save a copy for later
+    ANDA  #$F0        ;mask out lower bits
+    LSRA              ;shift right twice
+    LSRA
+    STAA  LCD_PORT    ;send to LCD
+    BCLR  LCD_PORT,RS ;RS=0=Command
+    BSET  LCD_PORT,EN ;EN=1=ON
+    NOP               ;do nothing for 3 instructions
+    NOP
+    NOP
+    BCLR  LCD_PORT,EN ;EN=0=off
+
+    PULA              ;get original value
+    ANDA  #$0F        ;mask out upper bits
+    LSLA              ;shift left twice
+    LSLA
+    STAA  LCD_PORT    ;send to LCD
+    BCLR  LCD_PORT,RS ;RS=0=Command
+    BSET  LCD_PORT,EN ;EN=1=ON
+    NOP               ;do nothing for 3 instructions
+    NOP
+    NOP
+    BCLR  LCD_PORT,EN ;EN=0=off
+
+    RTS               ;return to main
+
+    ;*****************************************************************
+    ;             Subroutine: LCDDAT4
+    ;*****************************************************************
+
+    LCDDAT4
+    PSHA              ;save a copy for later
+    ANDA  #$F0        ;mask out lower bits
+    LSRA              ;shift right twice
+    LSRA
+    STAA  LCD_PORT    ;send to LCD
+    BSET  LCD_PORT,RS ;RS=1=Data
+    BSET  LCD_PORT,EN ;EN=1=ON
+    NOP               ;do nothing for 3 instructions
+    NOP
+    NOP
+    BCLR  LCD_PORT,EN ;EN=0=off
+
+    PULA              ;get original value
+    ANDA  #$0F        ;mask out upper bits
+    LSLA              ;shift left twice
+    LSLA
+    STAA  LCD_PORT    ;send to LCD
+    BSET  LCD_PORT,RS ;RS=1=Data
+    BSET  LCD_PORT,EN ;EN=1=ON
+    NOP               ;do nothing for 3 instructions
+    NOP
+    NOP
+    BCLR  LCD_PORT,EN ;EN=0=off
+
+    RTS               ;return to main
+
+    ;*****************************************************************
+    ;             Interrupt ISR
+    ;*****************************************************************
+
+    ;*****************************************************************
+    ;           	Interrupt Vectors
+    ;*****************************************************************
+
+    ORG     $FFFE
+    DC.W    Main	    ;Reset Vector
+
+
+</p>
+  
+  <br>
+  
+  <a href="index.html">Return Home</a>
+
+</body>
