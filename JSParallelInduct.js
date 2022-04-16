@@ -1,4 +1,4 @@
-function ParaInduct(){ //Function the calculates parallel inductance
+function ParaInduct(){ //Function that calculates parallel inductance
     var NumPInd = prompt("How many inductors?")
     var inductors = new Array(NumPInd); //create arrays and declare variables
     var reciprical = new Array(NumPInd);
